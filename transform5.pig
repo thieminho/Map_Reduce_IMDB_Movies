@@ -1,0 +1,11 @@
+titles = LOAD 'input/datasource4/title.basics.tsv' USING PigStorage('\t') AS (tconst:chararray,titleType:chararray,primaryTitle:chararray,originalTitle:chararray,isAdult:int,startYear:int,endYear:int,runtimeMinutes:int,genres:chararray);
+actors = LOAD 'output_mr3' using org.apache.pig.piggybank.storage.SequenceFileLoader() AS (tconst:chararray,num:double);
+movies =  FILTER titles BY titleType == 'movie';
+moviesgenre = FOREACH movies GENERATE tconst,titleType,primaryTitle,originalTitle,isAdult,startYear,endYear,runtimeMinutes, FLATTEN(TOKENIZE(genres, ',')) AS genre;
+joined = JOIN moviesgenre BY tconst LEFT OUTER, actors BY tconst;
+grouped = GROUP joined BY genre;
+finalresult = FOREACH grouped GENERATE group AS genre, COUNT(joined.primaryTitle) AS movies, SUM(joined.num) AS actors;
+sorted = ORDER finalresult BY actors DESC;
+sortedwithoutnull = FILTER sorted BY genre != '\\N';
+limited = LIMIT sortedwithoutnull 3;
+STORE limited INTO 'output6' USING JsonStorage();
